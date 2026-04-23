@@ -1,38 +1,13 @@
-/*
-  Tranca Eletrônica com Teclado Matricial e Display LCD I2C
-  
-  Componentes utilizados:
-  - Arduino Uno
-  - Teclado Matricial 4x3
-  - Display LCD 16x2 com módulo I2C (HD44780)
-  - LED interno (pino 13)
-  
-  Bibliotecas necessárias:
-  - Keypad-master.zip
-  - Password-master.zip
-  - LiquidCrystal_I2C (para o display LCD com I2C)
-*/
-
 #include <Keypad.h>
 #include <Password.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
-// ==========================================
-// Configurações do Display LCD I2C
-// ==========================================
-
-// Endereço I2C do display (geralmente 0x27 ou 0x3F)
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-
-// ==========================================
-// Configurações do Teclado Matricial 4x3
-// ==========================================
+LiquidCrystal_I2C lcd(0x50, 16, 2);
 
 const byte NUMERO_LINHAS = 4;
 const byte NUMERO_COLUNAS = 3;
 
-// Mapa de teclas do teclado 4x3
 char mapaDoTeclado[NUMERO_LINHAS][NUMERO_COLUNAS] = {
   {'1', '2', '3'},
   {'4', '5', '6'},
@@ -40,13 +15,9 @@ char mapaDoTeclado[NUMERO_LINHAS][NUMERO_COLUNAS] = {
   {'*', '0', '#'}
 };
 
-// Pinos das linhas do teclado (conectados nos pinos digitais)
-byte pinosDasLinhas[NUMERO_LINHAS] = {0, 1, 2, 3};
+byte pinosDasLinhas[NUMERO_LINHAS] = {4, 5, 6, 7};
+byte pinosDasColunas[NUMERO_COLUNAS] = {8, 9, 10};
 
-// Pinos das colunas do teclado (conectados nos pinos analógicos A0, A1, A2)
-byte pinosDasColunas[NUMERO_COLUNAS] = {A0, A1, A2};
-
-// Criação do objeto teclado
 Keypad teclado = Keypad(
   makeKeymap(mapaDoTeclado),
   pinosDasLinhas,
@@ -55,40 +26,19 @@ Keypad teclado = Keypad(
   NUMERO_COLUNAS
 );
 
-// ==========================================
-// Configurações da Senha
-// ==========================================
-
-// Senha pré-cadastrada de 3 dígitos
 Password senha = Password("123");
 
-// ==========================================
-// Configurações do LED
-// ==========================================
-
 const int PINO_LED = 13;
-
-// ==========================================
-// Variáveis auxiliares
-// ==========================================
-
-int quantidadeDeDigitos = 0;        // Contador de dígitos digitados
-const int MAXIMO_DE_DIGITOS = 3;    // Quantidade máxima de dígitos da senha
-
-// ==========================================
-// Função de configuração inicial
-// ==========================================
+int quantidadeDeDigitos = 0;        
+const int MAXIMO_DE_DIGITOS = 3;  
 
 void setup() {
-  // Configura o pino do LED como saída
   pinMode(PINO_LED, OUTPUT);
   digitalWrite(PINO_LED, LOW);
 
-  // Inicializa o display LCD
   lcd.init();
   lcd.backlight();
 
-  // Exibe mensagem inicial
   lcd.setCursor(0, 0);
   lcd.print("Tranca Eletronica");
   lcd.setCursor(0, 1);
@@ -96,29 +46,17 @@ void setup() {
 
   delay(2000);
 
-  // Limpa o display e pede a senha
   pedirSenha();
 }
 
-// ==========================================
-// Loop principal
-// ==========================================
-
 void loop() {
-  // Aguarda o pressionamento de uma tecla
   char teclaPressionada = teclado.getKey();
 
-  // Se uma tecla foi pressionada
   if (teclaPressionada != NO_KEY) {
     processarTecla(teclaPressionada);
   }
 }
 
-// ==========================================
-// Funções criadas para o projeto
-// ==========================================
-
-// Função que exibe a tela pedindo a senha
 void pedirSenha() {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -126,43 +64,34 @@ void pedirSenha() {
   lcd.setCursor(0, 1);
   lcd.print("Senha: ");
 
-  // Reseta a senha e o contador de dígitos
   senha.reset();
   quantidadeDeDigitos = 0;
 }
 
-// Função que processa cada tecla pressionada
 void processarTecla(char tecla) {
 
-  // Se a tecla pressionada é um número (0 a 9)
   if (tecla >= '0' && tecla <= '9') {
 
-    // Só aceita dígitos se ainda não chegou ao limite
     if (quantidadeDeDigitos < MAXIMO_DE_DIGITOS) {
       senha.append(tecla);
       quantidadeDeDigitos++;
 
-      // Exibe asterisco no display para cada dígito digitado
       lcd.setCursor(7 + quantidadeDeDigitos - 1, 1);
       lcd.print("*");
     }
   }
 
-  // Se a tecla pressionada é o asterisco (*), verifica a senha
   else if (tecla == '*') {
     verificarSenha();
   }
 
-  // Se a tecla pressionada é o sustenido (#), limpa e pede nova senha
   else if (tecla == '#') {
     pedirSenha();
   }
 }
 
-// Função que verifica se a senha digitada está correta
 void verificarSenha() {
 
-  // Verifica se foram digitados os 3 dígitos
   if (quantidadeDeDigitos < MAXIMO_DE_DIGITOS) {
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -172,7 +101,6 @@ void verificarSenha() {
     return;
   }
 
-  // Verifica se a senha está correta usando a biblioteca Password
   if (senha.evaluate()) {
     acessoAutorizado();
   } else {
@@ -180,7 +108,6 @@ void verificarSenha() {
   }
 }
 
-// Função executada quando o acesso é autorizado
 void acessoAutorizado() {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -188,18 +115,15 @@ void acessoAutorizado() {
   lcd.setCursor(0, 1);
   lcd.print("autorizado!");
 
-  // Acende o LED por 1 segundo (simula abertura da porta)
   digitalWrite(PINO_LED, HIGH);
   delay(1000);
   digitalWrite(PINO_LED, LOW);
 
   delay(1000);
 
-  // Volta para a tela de pedir senha
   pedirSenha();
 }
 
-// Função executada quando o acesso é negado
 void acessoNegado() {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -208,7 +132,5 @@ void acessoNegado() {
   lcd.print("autorizado!");
 
   delay(2000);
-
-  // Volta para a tela de pedir senha
   pedirSenha();
 }
